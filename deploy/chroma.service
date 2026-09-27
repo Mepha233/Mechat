@@ -1,0 +1,18 @@
+[Unit]
+Description=Mechat Chroma vector database
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=mechat
+Group=mechat
+Environment=ANONYMIZED_TELEMETRY=False
+ExecStart=/opt/mechat/chroma-venv/bin/chroma run --path /var/lib/mechat/chroma --host 127.0.0.1 --port 8000
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

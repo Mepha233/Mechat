@@ -1,0 +1,40 @@
+/* 整个聊天页面最外层 Layout：控制全屏高度和页面基础背景 */
+.pageLayout:global(.ant-layout) {
+  height: 100dvh;
+  min-height: 100dvh;
+  overflow: hidden;
+  background: #f6f8fb;
+}
+
+/* 左侧 Sider 面板：控制内边距、背景、边界和阴影 */
+.sidebar:global(.ant-layout-sider) {
+  padding: 18px 14px;
+  overflow: hidden;
+  background: #182230;
+  border-right: 1px solid rgb(255 255 255 / 8%);
+  box-shadow: 4px 0 20px rgb(15 23 42 / 10%);
+}
+
+/* Sider 内部容器：使用纵向弹性布局组织顶部区域和对话列表 */
+.sidebar :global(.ant-layout-sider-children) {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+/* Sider 收缩状态：调整收缩后左右内边距 */
+.sidebar:global(.ant-layout-sider-collapsed) {
+  padding-inline: 14px;
+}
+
+/* 登录状态检查遮罩：避免页面先显示后闪出登录弹窗 */
+.authLoading {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f6f8fb;
+}

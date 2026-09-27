@@ -1,0 +1,262 @@
+/* TalkList 根容器：在 Sider 内纵向组织顶部、会话列表和底部用户区 */
+.talkListRoot {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+/* 侧栏顶部区域：排列 Mechat 品牌名、搜索按钮和收缩按钮 */
+.sidebarHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 42px;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+/* Mechat 品牌名称：控制字号、字重和收缩动画 */
+.brand {
+  min-width: 0;
+  overflow: hidden;
+  color: #f8fafc;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.5px;
+  white-space: nowrap;
+  transition: opacity 0.2s ease, width 0.2s ease;
+}
+
+/* 侧栏顶部操作按钮容器：排列搜索按钮和收缩按钮 */
+.sidebarActions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 搜索按钮和收缩按钮的默认外观 */
+.iconButton:global(.ant-btn) {
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+  flex-shrink: 0;
+  padding: 0;
+  color: #cbd5e1;
+  background: rgb(255 255 255 / 8%);
+  border-color: rgb(255 255 255 / 12%);
+  border-radius: 50%;
+  box-shadow: none;
+}
+
+/* 搜索按钮和收缩按钮的鼠标悬停效果 */
+.iconButton:global(.ant-btn):hover {
+  color: #ffffff;
+  background: rgb(255 255 255 / 16%);
+  border-color: rgb(255 255 255 / 22%);
+}
+
+/* 收缩状态的顶部区域：将品牌名和两个操作按钮改为纵向排列 */
+.talkListRoot[data-collapsed="true"] .sidebarHeader {
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+/* 收缩状态的品牌名：保持 M 与圆形按钮使用相同的占位尺寸 */
+.talkListRoot[data-collapsed="true"] .brand {
+  display: flex;
+  flex: 0 0 42px;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  opacity: 1;
+}
+
+/* 收缩状态的顶部操作区：让搜索和展开按钮纵向居中排列 */
+.talkListRoot[data-collapsed="true"] .sidebarActions {
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+/* 会话列表区域：占据侧栏剩余空间，内容过多时独立滚动 */
+.talkListArea {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #526174 transparent;
+}
+
+/* 展开状态的对话菜单：通过 Ant Design 菜单变量统一文字、背景和选中颜色 */
+.menu:global(.ant-menu) {
+  /* Ant Design Menu 组件的主题变量：分别控制默认、悬停、选中和分组标题状态 */
+  --ant-menu-item-color: #cbd5e1 !important;
+  --ant-menu-item-hover-color: #ffffff !important;
+  --ant-menu-item-selected-color: #ffffff !important;
+  --ant-menu-item-bg: transparent !important;
+  --ant-menu-item-hover-bg: rgb(255 255 255 / 9%) !important;
+  --ant-menu-item-selected-bg: #3b82f6 !important;
+  --ant-menu-group-title-color: #8291a5 !important;
+
+  width: 100%;
+  color: #d9e2ec;
+  background: transparent;
+  border-inline-end: 0;
+}
+
+/* 展开状态的菜单项：统一普通菜单项与子菜单标题的高度、间距和圆角 */
+.menu :global(.ant-menu-item),
+.menu :global(.ant-menu-submenu-title) {
+  height: 42px;
+  margin: 4px 0;
+  color: #cbd5e1;
+  line-height: 42px;
+  border-radius: 10px;
+}
+
+/* 展开状态的菜单项悬停效果：提高文字亮度并显示半透明背景 */
+.menu :global(.ant-menu-item:hover),
+.menu :global(.ant-menu-submenu-title:hover) {
+  color: #ffffff;
+  background: rgb(255 255 255 / 9%);
+}
+
+/* 当前会话对应的选中菜单项：使用蓝色背景突出正在查看的会话 */
+.menu :global(.ant-menu-item-selected) {
+  color: #ffffff;
+  background: #3b82f6;
+}
+
+/* 历史会话分组标题：控制“最近”等分组名称的间距和弱化文字样式 */
+.menu :global(.ant-menu-item-group-title) {
+  padding: 18px 12px 6px;
+  color: #8291a5;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* 菜单项图标：继承当前菜单项颜色，使默认、悬停和选中状态保持同步 */
+.menu :global(.ant-menu-item .anticon),
+.menu :global(.ant-menu-submenu-title .anticon) {
+  color: currentColor;
+  font-size: 16px;
+}
+
+/* 侧栏收缩后的操作区：将“新建对话”和“历史对话”按钮纵向居中排列 */
+.collapsedList {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+/* 侧栏收缩后的圆形操作按钮：统一尺寸、颜色、边框和背景 */
+.collapsedActionButton:global(.ant-btn.ant-btn-circle) {
+  width: 42px;
+  min-width: 42px;
+  height: 42px;
+  padding: 0;
+
+  color: #cbd5e1;
+  background: rgb(255 255 255 / 8%);
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 50%;
+  box-shadow: none;
+}
+
+/* 收缩状态圆形按钮的悬停效果：与侧栏顶部图标按钮保持一致 */
+.collapsedActionButton:global(.ant-btn.ant-btn-circle):hover {
+  color: #ffffff;
+  background: rgb(255 255 255 / 16%);
+  border-color: rgb(255 255 255 / 22%);
+}
+
+/* 历史对话 Popover 内容区：限制宽度和高度，记录过多时允许独立滚动 */
+.historyList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 220px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+/* Popover 中的单条历史会话按钮：单行显示，过长标题使用省略号 */
+.historyItem:global(.ant-btn) {
+  height: 38px;
+  padding-inline: 12px;
+  overflow: hidden;
+  color: #334155;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-radius: 8px;
+}
+
+/* 历史会话按钮的悬停效果：用浅蓝背景提示当前指向的记录 */
+.historyItem:global(.ant-btn):hover {
+  color: #1d4ed8;
+  background: #eff6ff;
+}
+
+/* 当前会话对应的历史按钮：根据 data-active 属性显示持续选中状态 */
+.historyItem:global(.ant-btn)[data-active="true"] {
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+
+/* 历史记录为空或正在加载时的 Empty 区域：与历史列表保持相同宽度 */
+.emptyHistory {
+  width: 220px;
+  margin-block: 12px;
+}
+
+/* 左下角用户身份区域：固定显示头像首字符和用户名 */
+.userPanel {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 58px;
+  margin-top: 12px;
+  padding: 12px 6px 0;
+  color: #e2e8f0;
+  border-top: 1px solid rgb(255 255 255 / 10%);
+}
+
+/* 用户头像：使用统一的品牌蓝色突出当前登录身份 */
+.userAvatar:global(.ant-avatar) {
+  flex: 0 0 auto;
+  color: #ffffff;
+  font-weight: 700;
+  background: #3b82f6;
+}
+
+/* 用户名：超出侧栏宽度时省略显示 */
+.userName {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 收缩状态的用户信息：仅保留头像并水平居中 */
+.talkListRoot[data-collapsed="true"] .userPanel {
+  justify-content: center;
+  padding-inline: 0;
+}
+
+/* 收缩状态的用户名：空间不足时隐藏文字 */
+.talkListRoot[data-collapsed="true"] .userName {
+  display: none;
+}

@@ -1,69 +1,355 @@
-import Image from "next/image";
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import { Layout, Spin } from "antd";
+
+import LoginModal from "./components/loginModal";
+import ChatPanel from "./components/chatPanel";
+import TalkList from "./components/talkList";
+import type {
+  AuthUser,
+  ChatGenerationStatus,
+  ChatMessage,
+  ChatStreamEvent,
+  ConversationSummary,
+  RagSource,
+} from "@/lib/types";
+import styles from "./page.module.css";
+
+const { Sider } = Layout;
+
+type ApiError = {
+  error?: string;
+};
+
+async function responseJson<T>(response: Response) {
+  return (await response.json()) as T & ApiError;
+}
 
 export default function Home() {
+  const [collapsed, setCollapsed] = useState(false);
+  const [authReady, setAuthReady] = useState(false);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
+  const [activeConversationId, setActiveConversationId] = useState<
+    string | null
+  >(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messageInput, setMessageInput] = useState("");
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [messagesLoading, setMessagesLoading] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [generationStatus, setGenerationStatus] =
+    useState<ChatGenerationStatus | null>(null);
+  const [pageError, setPageError] = useState("");
+
+  const loadConversations = useCallback(async () => {
+    setHistoryLoading(true);
+
+    try {
+      const response = await fetch("/api/conversations", { cache: "no-store" });
+      const data = await responseJson<{
+        conversations?: ConversationSummary[];
+      }>(response);
+
+      if (!response.ok) {
+        throw new Error(data.error ?? "历史会话加载失败。");
+      }
+
+      setConversations(data.conversations ?? []);
+    } catch (reason) {
+      setPageError(
+        reason instanceof Error ? reason.message : "历史会话加载失败。",
+      );
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const restoreSession = async () => {
+      try {
+        const response = await fetch("/api/auth/session", {
+          cache: "no-store",
+        });
+        const data = await responseJson<{ user?: AuthUser | null }>(response);
+
+        if (!cancelled && data.user) {
+          setUser(data.user);
+          await loadConversations();
+        }
+      } catch {
+        if (!cancelled) {
+          setPageError("登录状态检查失败，请刷新页面重试。");
+        }
+      } finally {
+        if (!cancelled) {
+          setAuthReady(true);
+        }
+      }
+    };
+
+    void restoreSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loadConversations]);
+
+  const startNewConversation = () => {
+    setActiveConversationId(null);
+    setMessages([]);
+    setPageError("");
+    setMessageInput("");
+    setGenerationStatus(null);
+  };
+
+  const handleLogin = (authenticatedUser: AuthUser) => {
+    setUser(authenticatedUser);
+    startNewConversation();
+    void loadConversations();
+  };
+
+  const selectConversation = async (conversationId: string) => {
+    setMessagesLoading(true);
+    setPageError("");
+    setGenerationStatus(null);
+
+    try {
+      const response = await fetch(
+        `/api/conversations/${conversationId}/messages`,
+        { cache: "no-store" },
+      );
+      const data = await responseJson<{ messages?: ChatMessage[] }>(response);
+
+      if (!response.ok) {
+        throw new Error(data.error ?? "历史消息加载失败。");
+      }
+
+      setActiveConversationId(conversationId);
+      setMessages(data.messages ?? []);
+    } catch (reason) {
+      setPageError(
+        reason instanceof Error ? reason.message : "历史消息加载失败。",
+      );
+    } finally {
+      setMessagesLoading(false);
+    }
+  };
+
+  const sendMessage = async () => {
+    const content = messageInput.trim();
+
+    if (!content || sending || !user) {
+      return;
+    }
+
+    const optimisticMessage: ChatMessage = {
+      id: `local-${Date.now()}`,
+      role: "user",
+      content,
+      sources: [],
+      createdAt: new Date().toISOString(),
+    };
+
+    setMessages((current) => [...current, optimisticMessage]);
+    setMessageInput("");
+    setSending(true);
+    setPageError("");
+    setGenerationStatus({ phase: "searching" });
+
+    const assistantId = `assistant-${Date.now()}`;
+    let answer = "";
+    let renderTimer: ReturnType<typeof setTimeout> | null = null;
+    let completed = false;
+
+    // 多个模型片段合并后更新一次消息，避免每个 token 都触发 React 重渲染。
+    const showAnswer = (sources: RagSource[] = []) => {
+      if (!answer) return;
+      const assistantMessage: ChatMessage = {
+        id: assistantId,
+        role: "assistant",
+        content: answer,
+        sources,
+        createdAt: new Date().toISOString(),
+      };
+      setMessages((current) => {
+        const exists = current.some((item) => item.id === assistantId);
+        return exists
+          ? current.map((item) =>
+              item.id === assistantId ? assistantMessage : item,
+            )
+          : [...current, assistantMessage];
+      });
+    };
+
+    const scheduleAnswer = () => {
+      if (renderTimer !== null) return;
+      renderTimer = setTimeout(() => {
+        renderTimer = null;
+        showAnswer();
+      }, 50);
+    };
+
+    const handleEvent = (event: ChatStreamEvent) => {
+      switch (event.type) {
+        case "searching":
+          setGenerationStatus({ phase: "searching" });
+          break;
+        case "retrieved":
+          setGenerationStatus({ phase: "retrieved", count: event.count });
+          break;
+        case "delta":
+          answer += event.text;
+          setGenerationStatus((current) =>
+            current?.phase === "answering"
+              ? current
+              : { phase: "answering", count: current?.count },
+          );
+          scheduleAnswer();
+          break;
+        case "saving":
+          setGenerationStatus((current) => ({
+            phase: "saving",
+            count: current?.count,
+          }));
+          break;
+        case "done":
+          if (renderTimer !== null) clearTimeout(renderTimer);
+          renderTimer = null;
+          answer = event.answer;
+          showAnswer(event.sources);
+          setActiveConversationId(event.conversationId);
+          setGenerationStatus((current) => ({
+            phase: "completed",
+            count: current?.count,
+          }));
+          completed = true;
+          break;
+        case "error":
+          throw new Error(event.error);
+      }
+    };
+
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: content,
+          conversationId: activeConversationId ?? undefined,
+        }),
+      });
+      if (response.status === 401) {
+        setUser(null);
+        throw new Error("登录状态已失效，请重新登录。");
+      }
+
+      if (!response.ok) {
+        const data = await responseJson<Record<string, unknown>>(response);
+        throw new Error(data.error ?? "回答生成失败。");
+      }
+
+      if (!response.body) {
+        throw new Error("服务器没有返回回答流。");
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      const readLines = () => {
+        let newline = buffer.indexOf("\n");
+        while (newline !== -1) {
+          const line = buffer.slice(0, newline).trim();
+          buffer = buffer.slice(newline + 1);
+          if (line) handleEvent(JSON.parse(line) as ChatStreamEvent);
+          newline = buffer.indexOf("\n");
+        }
+      };
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        readLines();
+      }
+      buffer += decoder.decode();
+      readLines();
+      if (buffer.trim()) handleEvent(JSON.parse(buffer) as ChatStreamEvent);
+      if (!completed) throw new Error("回答流意外中断，请重试。");
+
+      await loadConversations();
+    } catch (reason) {
+      setPageError(reason instanceof Error ? reason.message : "回答生成失败。");
+    } finally {
+      if (renderTimer !== null) clearTimeout(renderTimer);
+      if (!completed) {
+        showAnswer();
+        setGenerationStatus(null);
+      }
+      setSending(false);
+    }
+  };
+
+  const activeTitle = activeConversationId
+    ? (conversations.find((item) => item.id === activeConversationId)?.title ??
+      "历史对话")
+    : "新对话";
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <>
+      <Layout className={styles.pageLayout}>
+        <Sider
+          trigger={null}
+          collapsible
+          collapsed={collapsed}
+          width={272}
+          collapsedWidth={76}
+          className={styles.sidebar}
+        >
+          <TalkList
+            collapsed={collapsed}
+            username={user?.username}
+            conversations={conversations}
+            activeConversationId={activeConversationId}
+            loading={historyLoading}
+            onToggleCollapsed={() => {
+              setCollapsed((current) => !current);
+            }}
+            onNewConversation={startNewConversation}
+            onSelectConversation={(conversationId) => {
+              void selectConversation(conversationId);
+            }}
+          />
+        </Sider>
+
+        <ChatPanel
+          title={activeTitle}
+          username={user?.username}
+          messages={messages}
+          messageInput={messageInput}
+          error={pageError}
+          messagesLoading={messagesLoading}
+          sending={sending}
+          generationStatus={generationStatus}
+          onDismissError={() => setPageError("")}
+          onMessageInputChange={setMessageInput}
+          onSendMessage={() => {
+            void sendMessage();
+          }}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+      </Layout>
+
+      <LoginModal open={authReady && !user} onLogin={handleLogin} />
+
+      {!authReady ? (
+        <div className={styles.authLoading}>
+          <Spin size="large" description="正在检查登录状态" />
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+      ) : null}
+    </>
   );
 }

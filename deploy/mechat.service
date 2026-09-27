@@ -1,0 +1,21 @@
+[Unit]
+Description=Mechat Next.js application
+After=network-online.target postgresql.service chroma.service
+Wants=network-online.target
+Requires=postgresql.service chroma.service
+
+[Service]
+Type=simple
+User=mechat
+Group=mechat
+WorkingDirectory=/opt/mechat/app
+Environment=NODE_ENV=production
+EnvironmentFile=/etc/mechat/mechat.env
+ExecStart=/usr/bin/npm run start -- --hostname 127.0.0.1 --port 3000
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

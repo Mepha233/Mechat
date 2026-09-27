@@ -1,0 +1,184 @@
+/* 右侧聊天主布局：限制在视口高度内，由消息内容区独立滚动 */
+.chatLayout:global(.ant-layout) {
+  min-width: 0;
+  min-height: 0;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+/* 右侧聊天区域顶部 Header：显示当前对话名称 */
+.header:global(.ant-layout-header) {
+  height: 64px;
+  padding: 0 28px;
+  color: #243044;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 64px;
+  text-align: center;
+  background: rgb(255 255 255 / 92%);
+  border-bottom: 1px solid #e7ebf0;
+}
+
+/* 右侧消息内容区域：占据剩余空间并允许消息列表滚动 */
+.content:global(.ant-layout-content) {
+  min-width: 0;
+  min-height: 0;
+  padding: 28px;
+  overflow-y: auto;
+  color: #27364b;
+  background: #f6f8fb;
+}
+
+/* 消息区域内部容器：限制阅读宽度并在页面中居中 */
+.messageColumn {
+  width: min(820px, 100%);
+  min-height: 100%;
+  margin-inline: auto;
+}
+
+/* 页面级错误提示：展示接口、数据库或模型错误 */
+.pageAlert {
+  margin-bottom: 18px;
+}
+
+/* 空会话欢迎区域：在没有消息时居中展示引导文字 */
+.emptyState {
+  display: flex;
+  min-height: calc(100dvh - 220px);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  text-align: center;
+}
+
+/* 历史消息加载区域：保持加载提示在内容区中央 */
+.centerState {
+  display: flex;
+  min-height: 320px;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 消息列表：按发送顺序纵向排列消息 */
+.messageList {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding-bottom: 12px;
+}
+
+/* 单条消息行：助手消息默认靠左 */
+.messageRow {
+  display: flex;
+  justify-content: flex-start;
+}
+
+/* 用户消息行：通过角色属性将气泡靠右排列 */
+.messageRow[data-role="user"] {
+  justify-content: flex-end;
+}
+
+/* 消息气泡：控制最大宽度、内边距和背景 */
+.messageBubble {
+  max-width: min(680px, 86%);
+  padding: 14px 16px;
+  color: #263449;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 15px;
+  box-shadow: 0 5px 18px rgb(30 41 59 / 6%);
+}
+
+/* 用户消息气泡：使用浅蓝色区分提问内容 */
+.messageRow[data-role="user"] .messageBubble {
+  color: #173b72;
+  background: #eaf2ff;
+  border-color: #d3e3fb;
+}
+
+/* 消息角色标签：显示用户名或 Mechat */
+.messageRole {
+  margin-bottom: 6px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* 消息正文：保留模型返回的换行 */
+.messageContent {
+  line-height: 1.75;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* RAG 引用来源：默认折叠，避免占用过多消息空间 */
+.sources {
+  margin-top: 12px;
+  padding-top: 10px;
+  color: #64748b;
+  font-size: 12px;
+  border-top: 1px solid #e2e8f0;
+}
+
+/* 引用来源列表：控制条目间距和左侧缩进 */
+.sources ol {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+
+/* 模型生成状态：显示检索与回答过程正在进行 */
+.generatingState {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+/* 右侧底部 Footer：承载并居中放置消息输入区域 */
+.footer:global(.ant-layout-footer) {
+  display: flex;
+  justify-content: center;
+  padding: 16px 24px 20px;
+  background: #f6f8fb;
+}
+
+/* 消息输入组合容器：控制最大宽度、圆角、边框和阴影 */
+.composer {
+  width: min(760px, 100%);
+  padding: 6px;
+  background: #ffffff;
+  border: 1px solid #dce3ea;
+  border-radius: 16px;
+  box-shadow: 0 8px 28px rgb(30 41 59 / 9%);
+}
+
+/* 消息输入框：控制输入框高度、内边距和字体尺寸 */
+.messageInput:global(.ant-input) {
+  height: 42px;
+  padding-inline: 14px;
+  font-size: 15px;
+  border: 0;
+  box-shadow: none;
+}
+
+/* 发送按钮：统一按钮高度、水平内边距和圆角 */
+.sendButton:global(.ant-btn) {
+  height: 42px;
+  padding-inline: 20px;
+  border-radius: 11px;
+}
+
+/* 窄屏适配：减小内容区和底部输入区的水平留白 */
+@media (max-width: 760px) {
+  /* 窄屏下的消息内容区域 */
+  .content:global(.ant-layout-content) {
+    padding: 18px;
+  }
+
+  /* 窄屏下的底部输入区域 */
+  .footer:global(.ant-layout-footer) {
+    padding-inline: 14px;
+  }
+}

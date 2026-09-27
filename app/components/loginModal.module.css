@@ -1,0 +1,14 @@
+.description {
+  margin-bottom: 18px;
+  color: #64748b;
+}
+
+.alert {
+  margin-bottom: 16px;
+}
+
+.submitButton:global(.ant-btn) {
+  height: 42px;
+  margin-top: 4px;
+  border-radius: 10px;
+}
